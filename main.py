@@ -22,7 +22,7 @@ def show_login_form():
         if user:
             st.session_state.user = user
             st.success("로그인 성공!")
-            st.experimental_rerun()
+            st.rerun()
         else:
             st.error("로그인 실패. 사용자명과 비밀번호를 확인하세요.")
 
@@ -36,7 +36,7 @@ def show_main_menu():
 
     if st.button("로그아웃"):
         st.session_state.user = None
-        st.experimental_rerun()
+        st.rerun()
 
 
 if __name__ == "__main__":
