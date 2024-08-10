@@ -112,7 +112,7 @@ def main():
                                 if delete_tag(video['_id'], tag):
                                     st.success(f"태그 '{tag}'가 삭제되었습니다.")
                                     time.sleep(1)
-                                    st.experimental_rerun()
+                                    st.rerun()
                                 else:
                                     st.error("태그 삭제 중 오류가 발생했습니다.")
                 else:
@@ -130,7 +130,7 @@ def main():
                                 st.success("태그가 추가되었습니다.")
                                 st.session_state['tag_input_key'] = st.session_state.get('tag_input_key', 0) + 1
                                 time.sleep(1)
-                                st.experimental_rerun()
+                                st.rerun()
                             else:
                                 st.warning("태그를 추가할 수 없습니다. (최대 3개)")
                         else:
