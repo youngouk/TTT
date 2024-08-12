@@ -8,15 +8,25 @@ def main():
     ui.show_header()
 
     if 'user' not in st.session_state or not st.session_state.user:
-        show_login_form()
+        show_auth_forms()
     else:
         show_main_menu()
 
 
+def show_auth_forms():
+    tab1, tab2 = st.tabs(["로그인", "회원가입"])
+
+    with tab1:
+        show_login_form()
+
+    with tab2:
+        show_registration_form()
+
+
 def show_login_form():
     st.subheader("로그인")
-    username = st.text_input("사용자명")
-    password = st.text_input("비밀번호", type="password")
+    username = st.text_input("사용자명", key="login_username")
+    password = st.text_input("비밀번호", type="password", key="login_password")
     if st.button("로그인"):
         user = auth.authenticate_user(username, password)
         if user:
@@ -25,6 +35,21 @@ def show_login_form():
             st.rerun()
         else:
             st.error("로그인 실패. 사용자명과 비밀번호를 확인하세요.")
+
+
+def show_registration_form():
+    st.subheader("회원가입")
+    new_username = st.text_input("새 사용자명", key="reg_username")
+    new_password = st.text_input("새 비밀번호", type="password", key="reg_password")
+    confirm_password = st.text_input("비밀번호 확인", type="password", key="confirm_password")
+
+    if st.button("회원가입"):
+        if new_password != confirm_password:
+            st.error("비밀번호가 일치하지 않습니다.")
+        elif auth.register_user(new_username, new_password):
+            st.success("회원가입 성공! 이제 로그인할 수 있습니다.")
+        else:
+            st.error("회원가입 실패. 이미 존재하는 사용자명일 수 있습니다.")
 
 
 def show_main_menu():
