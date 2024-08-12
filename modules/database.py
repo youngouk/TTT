@@ -5,6 +5,8 @@ from pymongo.server_api import ServerApi
 import certifi
 from config import MONGODB_URI
 from datetime import datetime
+from bson.objectid import ObjectId  # Add this import
+
 
 # MongoDB 연결 설정
 client = MongoClient(MONGODB_URI, server_api=ServerApi('1'), tlsCAFile=certifi.where())
@@ -70,16 +72,23 @@ def save_feedback(user_id, feedback):
     db['feedback'].insert_one(feedback_data)
 
 
-def add_tag_to_video(video_id, tag):
-    """비디오에 태그 추가 (최대 3개)"""
-    video = videos_collection.find_one({"video_id": video_id})
-    if video and len(video.get("tags", [])) < 3:
-        videos_collection.update_one(
-            {"video_id": video_id},
-            {"$addToSet": {"tags": tag}}
-        )
-        return True
-    return False
+def add_tag_to_video(video_id, new_tag):
+    video = videos_collection.find_one({"_id": ObjectId(video_id)})
+    if not video:
+        return False, "영상을 찾을 수 없습니다."
+
+    current_tags = video.get('tags', [])
+    if len(current_tags) >= 3:
+        return False, "태그는 최대 3개까지만 추가할 수 있습니다."
+
+    if new_tag in current_tags:
+        return False, "이미 존재하는 태그입니다."
+
+    videos_collection.update_one(
+        {"_id": ObjectId(video_id)},
+        {"$push": {"tags": new_tag}}
+    )
+    return True, "태그가 성공적으로 추가되었습니다."
 
 
 def remove_tag_from_video(video_id, tag):
