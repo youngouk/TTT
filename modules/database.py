@@ -14,7 +14,6 @@ db = client['youtube_transcripts']
 users_collection = db['users']
 videos_collection = db['videos']
 
-# database.py (일부)
 
 def get_video_tags(video_id):
     """비디오에 대한 태그 정보 조회"""
@@ -26,8 +25,7 @@ def get_video_info_from_db(video_ids):
     """데이터베이스에서 여러 비디오 정보 조회"""
     return list(videos_collection.find({"video_id": {"$in": video_ids}}))
 
-
-def get_user_videos(user_id, selected_tags=None, start_date=None, end_date=None, show_no_tags=False):
+def get_user_videos(user_id, selected_tags=None, start_date=None, end_date=None, show_no_tags=False, selected_channels=None):
     """사용자의 처리된 비디오 목록 가져오기 (필터링 포함)"""
     query = {"user_ids": user_id}
 
@@ -41,6 +39,9 @@ def get_user_videos(user_id, selected_tags=None, start_date=None, end_date=None,
             "$gte": start_date,
             "$lte": end_date
         }
+
+    if selected_channels:
+        query["channel"] = {"$in": selected_channels}
 
     return list(videos_collection.find(query))
 
@@ -107,3 +108,29 @@ def get_all_tags():
 def get_videos_by_tags(tags):
     """태그 리스트에 해당하는 비디오 정보 가져오기"""
     return list(videos_collection.find({"tags": {"$in": tags}}))
+
+def get_all_channels(user_id):
+    """사용자가 업로드한 비디오들의 채널 목록 가져오기"""
+    channels = videos_collection.distinct("channel", {"user_ids": user_id})
+    return channels
+
+def get_user_videos(user_id, selected_tags=None, start_date=None, end_date=None, show_no_tags=False, selected_channels=None):
+    """사용자의 처리된 비디오 목록 가져오기 (필터링 포함)"""
+    query = {"user_ids": user_id}
+
+    if show_no_tags:
+        query["$or"] = [{"tags": {"$exists": False}}, {"tags": []}]
+    elif selected_tags:
+        query["tags"] = {"$in": selected_tags}
+
+    if start_date and end_date:
+        query["processed_at"] = {
+            "$gte": start_date,
+            "$lte": end_date
+        }
+
+    # selected_channels를 이용한 필터링 추가
+    if selected_channels:
+        query["channel"] = {"$in": selected_channels}
+
+    return list(videos_collection.find(query))
