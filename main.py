@@ -55,11 +55,13 @@ st.markdown(
 
 def main():
     ui.show_header()
+    check_session_timeout()  # 세션 타임아웃 체크 및 갱신
 
     if 'user' not in st.session_state or not st.session_state.user:
         show_auth_forms()
     else:
         show_main_menu()
+
 
 
 def show_auth_forms():
@@ -84,10 +86,25 @@ def show_login_form():
         user = auth.authenticate_user(username, password)
         if user:
             st.session_state.user = user
+            st.session_state.login_time = time.time()  # 로그인 시각 저장
             st.success("Login successful!")
             st.rerun()
         else:
             st.error("Login failed. Please check your username and password.")
+
+
+def check_session_timeout():
+    """세션 타임아웃을 확인하고 세션을 갱신하는 함수"""
+    if 'login_time' in st.session_state:
+        current_time = time.time()
+        session_duration = current_time - st.session_state.login_time
+        if session_duration > 1800:  # 30분 = 1800초
+            st.session_state.user = None
+            st.session_state.login_time = None
+            st.warning("Your session has expired. Please log in again.")
+            st.rerun()
+        else:
+            st.session_state.login_time = current_time  # 세션 시간 갱신
 
 
 def show_registration_form():
@@ -107,8 +124,10 @@ def show_registration_form():
 
 def show_main_menu():
     st.write(f"Welcome, {st.session_state.user['username']}!")
+    
+    # 사용자 활동 시 세션 갱신
+    st.session_state.login_time = time.time()
 
-    # 카드 형태로 메뉴 항목 감싸기
     with st.container():
         st.markdown('<div class="card">', unsafe_allow_html=True)
         col1, col2, col3 = st.columns(3)
@@ -120,10 +139,10 @@ def show_main_menu():
             st.page_link("pages/03_video_list.py", label="Video List", icon="📋")
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # 로그아웃 버튼 스타일 및 크기 조정
     if st.button("Logout", key="logout-button"):
         st.session_state.user = None
         st.rerun()
+
 
 
 if __name__ == "__main__":
