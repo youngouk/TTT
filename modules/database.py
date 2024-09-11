@@ -89,6 +89,7 @@ def add_tag_to_video(video_id, new_tag):
         {"_id": ObjectId(video_id)},
         {"$push": {"tags": new_tag}}
     )
+    print(f"Added tag {new_tag} to video ID {video_id}")
     return True, "태그가 성공적으로 추가되었습니다."
 
 
