@@ -22,21 +22,36 @@ def delete_tag(video_id, tag):
 
 
 def add_tag_to_video(video_id, new_tag):
-    video = videos_collection.find_one({"_id": ObjectId(video_id)})
-    if not video:
-        return False
+    try:
+        video = videos_collection.find_one({"_id": ObjectId(video_id)})
+        if not video:
+            print(f"비디오를 찾을 수 없음: {video_id}")
+            return False, "비디오를 찾을 수 없습니다."
 
-    current_tags = video.get('tags', [])
-    if len(current_tags) >= 3:
-        return False
+        current_tags = video.get('tags', [])
+        if len(current_tags) >= 3:
+            print(f"태그 한도 초과: {video_id}")
+            return False, "태그는 최대 3개까지만 추가할 수 있습니다."
 
-    if new_tag not in current_tags:
-        videos_collection.update_one(
+        if new_tag in current_tags:
+            print(f"중복 태그: {video_id}, {new_tag}")
+            return False, "이미 존재하는 태그입니다."
+
+        result = videos_collection.update_one(
             {"_id": ObjectId(video_id)},
             {"$push": {"tags": new_tag}}
         )
-        return True
-    return False
+        
+        if result.modified_count > 0:
+            print(f"태그 추가 성공: {video_id}, {new_tag}")
+            return True, "태그가 성공적으로 추가되었습니다."
+        else:
+            print(f"태그 추가 실패: {video_id}, {new_tag}")
+            return False, "태그 추가에 실패했습니다."
+
+    except Exception as e:
+        print(f"태그 추가 중 오류 발생: {video_id}, {new_tag}, 오류: {str(e)}")
+        return False, f"오류 발생: {str(e)}"
 
 
 def parse_title(title):
