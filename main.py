@@ -2,7 +2,7 @@ import streamlit as st
 import time 
 from modules import auth, ui
 
-st.set_page_config(page_title="AskOnTube", page_icon="🎥", layout="wide")
+st.set_page_config(page_title="유튜브 질문하기", page_icon="🎥", layout="wide")
 
 # CSS 스타일 적용 (개선된 버전)
 st.markdown(
@@ -69,7 +69,7 @@ def show_auth_forms():
     # 카드 형태로 로그인/회원가입 폼 감싸기
     with st.container():
         st.markdown('<div class="card">', unsafe_allow_html=True)
-        tab1, tab2 = st.tabs(["Login", "Register"])
+        tab1, tab2 = st.tabs(["로그인", "회원가입"])
 
         with tab1:
             show_login_form()
@@ -80,18 +80,18 @@ def show_auth_forms():
 
 
 def show_login_form():
-    st.subheader("Login")
-    username = st.text_input("Username", key="login_username")
-    password = st.text_input("Password", type="password", key="login_password")
-    if st.button("Login"):
+    st.subheader("로그인")
+    username = st.text_input("사용자 이름", key="login_username")
+    password = st.text_input("비밀번호", type="password", key="login_password")
+    if st.button("로그인"):
         user = auth.authenticate_user(username, password)
         if user:
             st.session_state.user = user
             st.session_state.login_time = time.time()  # 로그인 시각 저장
-            st.success("Login successful!")
+            st.success("로그인 성공!")
             st.rerun()
         else:
-            st.error("Login failed. Please check your username and password.")
+            st.error("로그인 실패. 사용자 이름과 비밀번호를 확인해주세요.")
 
 
 def check_session_timeout():
@@ -102,29 +102,29 @@ def check_session_timeout():
         if session_duration > 1800:  # 30분 = 1800초
             st.session_state.user = None
             st.session_state.login_time = None
-            st.warning("Your session has expired. Please log in again.")
+            st.warning("세션이 만료되었습니다. 다시 로그인해주세요.")
             st.rerun()
         else:
             st.session_state.login_time = current_time  # 세션 시간 갱신
 
 
 def show_registration_form():
-    st.subheader("Register")
-    new_username = st.text_input("New Username", key="reg_username")
-    new_password = st.text_input("New Password", type="password", key="reg_password")
-    confirm_password = st.text_input("Confirm Password", type="password", key="confirm_password")
+    st.subheader("회원가입")
+    new_username = st.text_input("새 사용자 이름", key="reg_username")
+    new_password = st.text_input("새 비밀번호", type="password", key="reg_password")
+    confirm_password = st.text_input("비밀번호 확인", type="password", key="confirm_password")
 
-    if st.button("Register"):
+    if st.button("회원가입"):
         if new_password != confirm_password:
-            st.error("Passwords do not match.")
+            st.error("비밀번호가 일치하지 않습니다.")
         elif auth.register_user(new_username, new_password):
-            st.success("Registration successful! You can now log in.")
+            st.success("회원가입 성공! 이제 로그인할 수 있습니다.")
         else:
-            st.error("Registration failed. The username may already exist.")
+            st.error("회원가입 실패. 이미 존재하는 사용자 이름일 수 있습니다.")
 
 
 def show_main_menu():
-    st.write(f"Welcome, {st.session_state.user['username']}!")
+    st.write(f"환영합니다, {st.session_state.user['username']}님!")
     
     # 사용자 활동 시 세션 갱신
     st.session_state.login_time = time.time()
@@ -133,14 +133,14 @@ def show_main_menu():
         st.markdown('<div class="card">', unsafe_allow_html=True)
         col1, col2, col3 = st.columns(3)
         with col1:
-            st.page_link("pages/01_process_video.py", label="Process New Video", icon="🎥")
+            st.page_link("pages/01_process_video.py", label="새 동영상 처리", icon="🎥")
         with col2:
-            st.page_link("pages/02_ask_question.py", label="Ask a Question", icon="❓")
+            st.page_link("pages/02_ask_question.py", label="질문하기", icon="❓")
         with col3:
-            st.page_link("pages/03_video_list.py", label="Video List", icon="📋")
+            st.page_link("pages/03_video_list.py", label="동영상 목록", icon="📋")
         st.markdown('</div>', unsafe_allow_html=True)
 
-    if st.button("Logout", key="logout-button"):
+    if st.button("로그아웃", key="logout-button"):
         st.session_state.user = None
         st.rerun()
 
