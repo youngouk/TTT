@@ -9,7 +9,7 @@ import streamlit_tags as st_tags
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-st.set_page_config(page_title="Video List - AskOnTube", page_icon="📋", layout="wide")
+st.set_page_config(page_title="동영상 목록 - 유튜브 질문하기", page_icon="📋", layout="wide")
 
 
 def delete_tag(video_id, tag):
@@ -17,7 +17,7 @@ def delete_tag(video_id, tag):
         database.remove_tag_from_video(video_id, tag)
         return True
     except Exception as e:
-        logger.error(f"Error occurred while deleting tag: {str(e)}")
+        logger.error(f"태그 삭제 중 오류 발생: {str(e)}")
         return False
 
 
@@ -48,32 +48,32 @@ def parse_title(title):
 
 
 def main():
-    st.title("📋 Processed Video List")
+    st.title("📋 처리된 동영상 목록")
 
     if 'user' not in st.session_state or not st.session_state.user:
-        st.warning("You need to log in to view the video list.")
-        st.page_link("main.py", label="Go to Login Page", icon="🏠")
+        st.warning("동영상 목록을 보려면 로그인이 필요합니다.")
+        st.page_link("main.py", label="로그인 페이지로 이동", icon="🏠")
         return
 
     # Filter options
-    st.subheader("Filter Options")
+    st.subheader("필터 옵션")
     col1, col2, col3, col4 = st.columns(4)
     with col1:
         all_tags = database.get_all_tags()
-        logger.info(f"All tags: {all_tags}")
-        selected_tags = st.multiselect("Select tags", all_tags)
+        logger.info(f"모든 태그: {all_tags}")
+        selected_tags = st.multiselect("태그 선택", all_tags)
     with col2:
         today = datetime.now().date()
-        date_range = st.date_input("Select date range", [today - timedelta(days=30), today])
+        date_range = st.date_input("날짜 범위 선택", [today - timedelta(days=30), today])
     with col3:
         all_channels = database.get_all_channels(st.session_state.user['_id'])
-        selected_channels = st.multiselect("Select channels", all_channels)
+        selected_channels = st.multiselect("채널 선택", all_channels)
     with col4:
-        show_no_tags = st.checkbox("Show only videos without tags")
+        show_no_tags = st.checkbox("태그 없는 동영상만 표시")
 
     # Sort option
-    sort_options = ["Processed Time (Newest First)", "Processed Time (Oldest First)", "Video Duration (Longest First)", "Video Duration (Shortest First)"]
-    selected_sort = st.selectbox("Sort by", sort_options)
+    sort_options = ["처리 시간 (최신순)", "처리 시간 (오래된순)", "동영상 길이 (긴 순)", "동영상 길이 (짧은 순)"]
+    selected_sort = st.selectbox("정렬 기준", sort_options)
 
     # Apply filters and sorting
     start_date = None
@@ -101,24 +101,24 @@ def main():
     )
 
     # Apply sorting
-    if selected_sort == "Processed Time (Newest First)":
+    if selected_sort == "처리 시간 (최신순)":
         videos.sort(key=lambda x: x.get('processed_at'), reverse=True)
-    elif selected_sort == "Processed Time (Oldest First)":
+    elif selected_sort == "처리 시간 (오래된순)":
         videos.sort(key=lambda x: x.get('processed_at'))
-    elif selected_sort == "Video Duration (Longest First)":
+    elif selected_sort == "동영상 길이 (긴 순)":
         videos.sort(key=lambda x: x.get('duration'), reverse=True)
-    elif selected_sort == "Video Duration (Shortest First)":
+    elif selected_sort == "동영상 길이 (짧은 순)":
         videos.sort(key=lambda x: x.get('duration'))
 
     if not videos:
-        st.info("No processed videos match the criteria.")
-        st.page_link("pages/01_process_video.py", label="Process a New Video", icon="🎥")
+        st.info("조건에 맞는 처리된 동영상이 없습니다.")
+        st.page_link("pages/01_process_video.py", label="새 동영상 처리하기", icon="🎥")
     else:
         for video in videos:
             parsed_title = parse_title(video['title'])
             # Expander 추가 및 폰트 사이즈 복구
             with st.expander(f"{parsed_title}"):
-                st.markdown(f"<p style='font-size:12px;'>Channel: {video['channel']}</p>", unsafe_allow_html=True)
+                st.markdown(f"<p style='font-size:12px;'>채널: {video['channel']}</p>", unsafe_allow_html=True)
 
                 if 'processed_at' in video:
                     processed_time = video['processed_at']
@@ -126,25 +126,25 @@ def main():
                         processed_time_str = processed_time.strftime("%Y-%m-%d %H:%M:%S")
                     else:
                         processed_time_str = str(processed_time)
-                    st.markdown(f"<p style='font-size:12px;'>Processed at: {processed_time_str}</p>",
+                    st.markdown(f"<p style='font-size:12px;'>처리 시간: {processed_time_str}</p>",
                                 unsafe_allow_html=True)
                 else:
-                    st.info("Processing time information not available.")
+                    st.info("처리 시간 정보가 없습니다.")
 
                 if 'duration' in video:
-                    st.markdown(f"<p style='font-size:12px;'>Video duration: {video['duration']} seconds</p>",
+                    st.markdown(f"<p style='font-size:12px;'>동영상 길이: {video['duration']} 초</p>",
                                 unsafe_allow_html=True)
                 else:
-                    st.info("Video duration information not available.")
+                    st.info("동영상 길이 정보가 없습니다.")
 
                 # Tags section
                 tags = video.get('tags', [])
-                st.markdown("###### Tags")  # "Tags" 섹션 제목 추가
+                st.markdown("###### 태그")  # "Tags" 섹션 제목 추가
 
                 # streamlit-tags 컴포넌트를 사용하여 태그 입력 및 표시
                 selected_tags = st_tags.st_tags(
                     label="",  # 라벨 숨기기
-                    text="Enter tags",
+                    text="태그 입력",
                     value=tags,
                     suggestions=all_tags,  # 자동 완성 기능 추가
                     key=f"tags_{video['_id']}"
@@ -158,28 +158,28 @@ def main():
                         for new_tag in new_tags:
                             if new_tag not in tags:
                                 if add_tag_to_video(video['_id'], new_tag):
-                                    st.success("Tag added.")
+                                    st.success("태그가 추가되었습니다.")
                                 else:
                                     current_tags = video.get('tags', [])
                                     if len(current_tags) >= 3:
-                                        st.warning("Cannot add more tags. (Maximum 3)")
+                                        st.warning("더 이상 태그를 추가할 수 없습니다. (최대 3개)")
                                     else:
-                                        st.warning("Tag already exists or cannot be added.")
+                                        st.warning("태그가 이미 존재하거나 추가할 수 없습니다.")
                         st.session_state[f"tags_{video['_id']}"] = selected_tags
                         time.sleep(1)
                         st.rerun()
 
                 col1, col2 = st.columns(2)
                 with col1:
-                    if st.button(f"Ask Questions 🙋‍♀️", key=f"ask_{video['_id']}"):
+                    if st.button(f"질문하기 🙋‍♀️", key=f"ask_{video['_id']}"):
                         st.session_state.last_processed_video_id = video['_id']
                         st.switch_page("pages/02_ask_question.py")
                 with st.container():
-                    if st.button(f"View Full Transcript 📜", key=f"transcript_{video['_id']}"):
+                    if st.button(f"전체 자막 보기 📜", key=f"transcript_{video['_id']}"):
                         if 'transcript' in video:
-                            st.text_area("Full Transcript", value=video['transcript'], height=300)
+                            st.text_area("전체 자막", value=video['transcript'], height=300)
                         else:
-                            st.info("Transcript information not available")
+                            st.info("자막 정보가 없습니다")
 
 
 if __name__ == "__main__":
