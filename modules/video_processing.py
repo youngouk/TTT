@@ -292,7 +292,7 @@ def download_and_process_audio(url, video_id):
             'noplaylist': True,
             'sleep_interval': 5,  # 요청 간 5초 지연 추가
             'max_sleep_interval': 10,  # 최대 10초까지 지연 가능
-            # 'proxy': os.environ.get('FIXIE_URL', ''),  # Fixie 프록시 URL 사용 (환경 변수에서 가져옴)
+            'proxy': os.environ.get('FIXIE_URL', ''),  # Fixie 프록시 URL 사용 (환경 변수에서 가져옴)
         }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
