@@ -170,40 +170,58 @@ def get_video_captions(video_id):
     try:
         response = requests.get(url)
         response.raise_for_status()
+
         data = response.json()
+        logger.debug(f"자막 데이터: {data}")
 
         if "items" in data and len(data["items"]) > 0:
-            ko_caption = next((item for item in data["items"] if item["snippet"]["language"] == "ko"), None)
-            en_caption = next((item for item in data["items"] if item["snippet"]["language"] == "en"), None)
+            # 자막 선택 (한국어가 없으면 영어 자막을 사용)
+            caption = next((item for item in data["items"] if item["snippet"]["language"] in ["ko", "en"]), None)
 
-            caption_id = ko_caption["id"] if ko_caption else (
-                en_caption["id"] if en_caption else data["items"][0]["id"])
-
-            return download_caption(caption_id)
+            if caption:
+                caption_id = caption["id"]
+                logger.info(f"자막 ID {caption_id}를 사용하여 자막 다운로드 시도")
+                return download_caption(caption_id)
+            else:
+                logger.info(f"비디오 {video_id}에 사용 가능한 자막이 없습니다.")
+                return None
         else:
             logger.info(f"비디오 {video_id}에 사용 가능한 자막이 없습니다.")
             return None
 
     except requests.RequestException as e:
         logger.error(f"자막 정보 요청 중 오류 발생: {str(e)}")
+        logger.debug(f"응답 상태 코드: {response.status_code}")
+        logger.debug(f"응답 내용: {response.text}")
+        return None
+    except ValueError as e:
+        logger.error(f"JSON 디코딩 오류 발생: {str(e)}")
+        return None
+    except Exception as e:
+        logger.error(f"예상치 못한 오류 발생: {str(e)}")
         return None
 
 
 def download_caption(caption_id):
     """지정된 자막 ID의 자막 내용을 다운로드합니다."""
-    url = f"https://www.googleapis.com/youtube/v3/captions/{caption_id}?key={YOUTUBE_API_KEY}"
+    url = f"https://www.googleapis.com/youtube/v3/captions/{caption_id}?key={YOUTUBE_API_KEY}&tfmt=srv3"
 
     try:
-        response = requests.get(url, headers={"Accept": "application/json"})
+        response = requests.get(url)
         response.raise_for_status()
-        caption_data = response.json()
 
-        return caption_data.get("text", "")
+        # 자막 데이터가 텍스트 형태로 반환되므로 텍스트로 직접 반환
+        logger.info(f"자막 ID {caption_id} 다운로드 성공")
+        return response.text
 
     except requests.RequestException as e:
         logger.error(f"자막 다운로드 중 오류 발생: {str(e)}")
+        logger.debug(f"응답 상태 코드: {response.status_code}")
+        logger.debug(f"응답 내용: {response.text}")
         return None
-
+    except Exception as e:
+        logger.error(f"예상치 못한 오류 발생: {str(e)}")
+        return None
 
 def process_video(video_url, user_id, progress_bar=None):
     try:
