@@ -115,10 +115,10 @@ def extract_video_id_and_process(url):
             raise ValueError("YouTube 비디오 ID를 추출할 수 없습니다.")
 
         # 기본 URL 형식으로 변환
-        base_url = f"https://www.youtube.com/watch?v={video_id}"
-        logger.info(f"생성된 기본 URL: {base_url}")
+        mobile_url = f"https://youtu.be/{video_id}"
+        logger.info(f"생성된 모바일 URL: {mobile_url}")
 
-        return base_url, video_id
+        return mobile_url, video_id
 
     except Exception as e:
         logger.error(f"URL 파싱 중 오류 발생: {str(e)}")
@@ -128,7 +128,7 @@ def extract_video_id_and_process(url):
 def get_video_info(video_url):
     """YouTube API를 사용하여 비디오 정보를 가져옵니다."""
     try:
-        base_url, video_id = extract_video_id_and_process(video_url)
+        mobile_url, video_id = extract_video_id_and_process(video_url)
         logger.info(f"API 요청을 위한 비디오 ID: {video_id}")
 
         url = f"https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id={video_id}&key={YOUTUBE_API_KEY}"
