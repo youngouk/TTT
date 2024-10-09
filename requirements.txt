@@ -14,3 +14,4 @@ bcrypt
 tiktoken
 scikit-learn
 streamlit_tags
+youtube_transcript_api
