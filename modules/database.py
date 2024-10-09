@@ -15,6 +15,21 @@ users_collection = db['users']
 videos_collection = db['videos']
 
 
+def find_user_by_email(email):
+    return users_collection.find_one({"email": email})
+
+def create_user(email, name, picture):
+    user_data = {
+        "email": email,
+        "name": name,
+        "picture": picture,
+        "created_at": datetime.utcnow(),
+        "oauth_provider": "google"
+    }
+    result = users_collection.insert_one(user_data)
+    return users_collection.find_one({"_id": result.inserted_id})
+
+
 def get_video_tags(video_id):
     """비디오에 대한 태그 정보 조회"""
     video = videos_collection.find_one({"video_id": video_id})
