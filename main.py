@@ -76,7 +76,7 @@ def main():
             st.session_state.login_time = time.time()
             st.success("Google 계정으로 로그인 성공!")
             st.query_params.clear()  # URL에서 query params 제거
-            st.experimental_rerun()
+            st.rerun()
         else:
             st.error("Google 계정으로 로그인하는 중 오류가 발생했습니다.")
             st.query_params.clear()  # 오류 발생 시 query params 제거
@@ -112,7 +112,7 @@ def check_session_timeout():
             st.session_state.user = None
             st.session_state.login_time = None
             st.warning("세션이 만료되었습니다. 다시 로그인해주세요.")
-            st.experimental_rerun()
+            st.rerun()
         else:
             st.session_state.login_time = current_time  # 세션 시간 갱신
 

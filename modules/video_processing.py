@@ -9,16 +9,19 @@ import yt_dlp
 import time
 from config import MAX_VIDEO_DURATION, YOUTUBE_API_KEY
 from modules.database import videos_collection
-from modules.nlp import transcribe_audio, embed_text
+from modules.nlp import embed_text  # transcribe_audio는 그대로 사용
 from openai import OpenAI
 import tiktoken
 from config import OPENAI_API_KEY
+from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptFound, \
+    CouldNotRetrieveTranscript
 
 # OpenAI 클라이언트 초기화
 client = OpenAI(api_key=OPENAI_API_KEY)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
 
 def chunk_text(text, max_tokens=8000):
     """텍스트를 지정된 최대 토큰 수로 나눕니다."""
@@ -41,6 +44,7 @@ def chunk_text(text, max_tokens=8000):
 
     return chunks
 
+
 def embed_text(text):
     """텍스트를 청크로 나누고 각 청크를 임베딩합니다."""
     chunks = chunk_text(text)
@@ -57,6 +61,7 @@ def embed_text(text):
     else:
         return []
 
+
 def transcribe_audio(file_path):
     """오디오 파일을 텍스트로 변환"""
     with open(file_path, "rb") as audio_file:
@@ -65,6 +70,7 @@ def transcribe_audio(file_path):
             file=audio_file
         )
     return transcript.text
+
 
 def extract_video_id_and_process(url):
     """
@@ -158,70 +164,52 @@ def get_video_info(video_url):
         logger.error(f"예상치 못한 오류 발생: {e}")
         raise ValueError(f"비디오 정보를 처리하는 중 오류가 발생했습니다: {str(e)}")
 
+
 def parse_duration(duration):
     """YouTube API의 duration 문자열을 초 단위로 변환합니다."""
     return int(isodate.parse_duration(duration).total_seconds())
 
 
-def get_video_captions(video_id):
-    """YouTube API를 사용하여 비디오의 자막을 가져옵니다."""
-    url = f"https://www.googleapis.com/youtube/v3/captions?part=snippet&videoId={video_id}&key={YOUTUBE_API_KEY}"
+def get_video_captions(video_url, languages=['ko', 'en']):
+    """
+    youtube-transcript-api를 사용하여 자막을 다운로드합니다.
 
+    :param video_url: YouTube 비디오 URL
+    :param languages: 자막 언어 코드 목록 (우선 순위에 따라 정렬)
+    :return: 자막 텍스트 또는 None
+    """
     try:
-        response = requests.get(url)
-        response.raise_for_status()
+        # 비디오 ID 추출
+        _, video_id = extract_video_id_and_process(video_url)
 
-        data = response.json()
-        logger.debug(f"자막 데이터: {data}")
+        # 자막 목록 가져오기
+        transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
 
-        if "items" in data and len(data["items"]) > 0:
-            # 자막 선택 (한국어가 없으면 영어 자막을 사용)
-            caption = next((item for item in data["items"] if item["snippet"]["language"] in ["ko", "en"]), None)
+        # 원하는 언어의 자막 찾기
+        transcript = transcript_list.find_transcript(languages)
 
-            if caption:
-                caption_id = caption["id"]
-                logger.info(f"자막 ID {caption_id}를 사용하여 자막 다운로드 시도")
-                return download_caption(caption_id)
-            else:
-                logger.info(f"비디오 {video_id}에 사용 가능한 자막이 없습니다.")
-                return None
-        else:
-            logger.info(f"비디오 {video_id}에 사용 가능한 자막이 없습니다.")
-            return None
+        # 자막 데이터 가져오기
+        transcript_data = transcript.fetch()
 
-    except requests.RequestException as e:
-        logger.error(f"자막 정보 요청 중 오류 발생: {str(e)}")
-        logger.debug(f"응답 상태 코드: {response.status_code}")
-        logger.debug(f"응답 내용: {response.text}")
+        # 자막을 하나의 문자열로 변환
+        transcript_text = ' '.join([entry['text'] for entry in transcript_data])
+
+        logger.info(f"자막 다운로드 성공: {video_id}")
+        return transcript_text
+
+    except TranscriptsDisabled:
+        logger.warning(f"비디오 {video_url}에 자막이 비활성화되어 있습니다.")
         return None
-    except ValueError as e:
-        logger.error(f"JSON 디코딩 오류 발생: {str(e)}")
+    except NoTranscriptFound:
+        logger.warning(f"비디오 {video_url}에 자막이 존재하지 않습니다.")
+        return None
+    except CouldNotRetrieveTranscript as e:
+        logger.error(f"자막을 가져오는 중 오류 발생: {str(e)}")
         return None
     except Exception as e:
         logger.error(f"예상치 못한 오류 발생: {str(e)}")
         return None
 
-
-def download_caption(caption_id):
-    """지정된 자막 ID의 자막 내용을 다운로드합니다."""
-    url = f"https://www.googleapis.com/youtube/v3/captions/{caption_id}?key={YOUTUBE_API_KEY}&tfmt=srv3"
-
-    try:
-        response = requests.get(url)
-        response.raise_for_status()
-
-        # 자막 데이터가 텍스트 형태로 반환되므로 텍스트로 직접 반환
-        logger.info(f"자막 ID {caption_id} 다운로드 성공")
-        return response.text
-
-    except requests.RequestException as e:
-        logger.error(f"자막 다운로드 중 오류 발생: {str(e)}")
-        logger.debug(f"응답 상태 코드: {response.status_code}")
-        logger.debug(f"응답 내용: {response.text}")
-        return None
-    except Exception as e:
-        logger.error(f"예상치 못한 오류 발생: {str(e)}")
-        return None
 
 def process_video(video_url, user_id, progress_bar=None):
     try:
@@ -249,8 +237,8 @@ def process_video(video_url, user_id, progress_bar=None):
         if duration > MAX_VIDEO_DURATION:
             raise ValueError(f"비디오 길이가 {MAX_VIDEO_DURATION // 60}분을 초과합니다.")
 
-        # 자막 데이터 가져오기 시도
-        caption_text = get_video_captions(video_id)
+        # 자막 데이터 가져오기 시도 (youtube-transcript-api 사용)
+        caption_text = get_video_captions(video_url, languages=['ko', 'en'])
         if progress_bar:
             if caption_text:
                 progress_bar.progress(20, text="자막 다운로드 성공! 🥳")
@@ -299,6 +287,7 @@ def process_video(video_url, user_id, progress_bar=None):
         logger.error(f"비디오 처리 중 오류 발생: {str(e)}")
         raise
 
+
 def download_and_process_audio(url, video_id):
     output_path = f"temp_audio_{video_id}"
     try:
@@ -310,7 +299,6 @@ def download_and_process_audio(url, video_id):
             'noplaylist': True,
             'sleep_interval': 5,  # 요청 간 5초 지연 추가
             'max_sleep_interval': 10,  # 최대 10초까지 지연 가능
-            'proxy': os.environ.get('FIXIE_URL', ''),  # Fixie 프록시 URL 사용 (환경 변수에서 가져옴)
         }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -327,7 +315,7 @@ def download_and_process_audio(url, video_id):
 
 def update_user_for_video(video_id, user_id):
     videos_collection.update_one(
-        {"_id": video_id},
+        {"video_id": video_id},
         {"$addToSet": {"user_ids": user_id}}
     )
 

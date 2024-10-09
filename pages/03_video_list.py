@@ -1,3 +1,5 @@
+# 03_video_list.py
+
 import streamlit as st
 from modules import database
 from datetime import datetime, timedelta
@@ -11,48 +13,16 @@ logger = logging.getLogger(__name__)
 
 st.set_page_config(page_title="동영상 목록 - 유튜브 질문하기", page_icon="📋", layout="wide")
 
-
 def delete_tag(video_id, tag):
     try:
-        database.remove_tag_from_video(video_id, tag)
-        return True
+        return database.remove_tag_from_video(video_id, tag)
     except Exception as e:
         logger.error(f"태그 삭제 중 오류 발생: {str(e)}")
         return False
 
-
 def add_tag_to_video(video_id, new_tag):
-    try:
-        video = videos_collection.find_one({"_id": ObjectId(video_id)})
-        if not video:
-            print(f"비디오를 찾을 수 없음: {video_id}")
-            return False, "비디오를 찾을 수 없습니다."
-
-        current_tags = video.get('tags', [])
-        if len(current_tags) >= 3:
-            print(f"태그 한도 초과: {video_id}")
-            return False, "태그는 최대 3개까지만 추가할 수 있습니다."
-
-        if new_tag in current_tags:
-            print(f"중복 태그: {video_id}, {new_tag}")
-            return False, "이미 존재하는 태그입니다."
-
-        result = videos_collection.update_one(
-            {"_id": ObjectId(video_id)},
-            {"$push": {"tags": new_tag}}
-        )
-        
-        if result.modified_count > 0:
-            print(f"태그 추가 성공: {video_id}, {new_tag}")
-            return True, "태그가 성공적으로 추가되었습니다."
-        else:
-            print(f"태그 추가 실패: {video_id}, {new_tag}")
-            return False, "태그 추가에 실패했습니다."
-
-    except Exception as e:
-        print(f"태그 추가 중 오류 발생: {video_id}, {new_tag}, 오류: {str(e)}")
-        return False, f"오류 발생: {str(e)}"
-
+    success, message = database.add_tag_to_video(video_id, new_tag)
+    return success, message
 
 def parse_title(title):
     # Remove emojis and replace consecutive spaces with a single space
@@ -60,7 +30,6 @@ def parse_title(title):
 
     # Select first 25 characters and add "🎥"
     return f"🎥 {title[:25].strip()}{'...' if len(title) > 25 else ''}"
-
 
 def main():
     st.title("📋 처리된 동영상 목록")
@@ -172,30 +141,26 @@ def main():
                     if new_tags is not None:
                         for new_tag in new_tags:
                             if new_tag not in tags:
-                                if add_tag_to_video(video['_id'], new_tag):
+                                success, message = add_tag_to_video(video['_id'], new_tag)
+                                if success:
                                     st.success("태그가 추가되었습니다.")
                                 else:
-                                    current_tags = video.get('tags', [])
-                                    if len(current_tags) >= 3:
-                                        st.warning("더 이상 태그를 추가할 수 없습니다. (최대 3개)")
-                                    else:
-                                        st.warning("태그가 이미 존재하거나 추가할 수 없습니다.")
+                                    st.warning(message)
                         st.session_state[f"tags_{video['_id']}"] = selected_tags
                         time.sleep(1)
-                        st.rerun()
+                        st.experimental_rerun()
 
                 col1, col2 = st.columns(2)
                 with col1:
                     if st.button(f"질문하기 🙋‍♀️", key=f"ask_{video['_id']}"):
                         st.session_state.last_processed_video_id = video['_id']
                         st.switch_page("pages/02_ask_question.py")
-                with st.container():
+                with col2:
                     if st.button(f"전체 자막 보기 📜", key=f"transcript_{video['_id']}"):
                         if 'transcript' in video:
                             st.text_area("전체 자막", value=video['transcript'], height=300)
                         else:
                             st.info("자막 정보가 없습니다")
-
 
 if __name__ == "__main__":
     main()
